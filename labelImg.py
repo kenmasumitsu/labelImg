@@ -134,12 +134,17 @@ class MainWindow(QMainWindow, WindowMixin):
         self.editButton = QToolButton()
         self.editButton.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
 
+        self.copy_prev_button = QPushButton('copy prev')
+        self.copy_prev_button.setShortcut('c')
+        self.copy_prev_button.clicked.connect(self.copy_prev)
+        listLayout.addWidget(self.copy_prev_button)
+
         # Add some of widgets to listLayout
         listLayout.addWidget(self.editButton)
         listLayout.addWidget(self.diffcButton)
         listLayout.addWidget(useDefaultLabelContainer)
 
-        # Create and add combobox for showing unique labels in group 
+        # Create and add combobox for showing unique labels in group
         self.comboBox = ComboBox(self)
         listLayout.addWidget(self.comboBox)
 
@@ -154,7 +159,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.labelList.itemChanged.connect(self.labelItemChanged)
         listLayout.addWidget(self.labelList)
 
-        
+
 
         self.dock = QDockWidget(getStr('boxLabelText'), self)
         self.dock.setObjectName(getStr('labels'))
@@ -495,6 +500,49 @@ class MainWindow(QMainWindow, WindowMixin):
             self.canvas.setDrawingShapeToSquare(True)
 
     ## Support Functions ##
+    def copy_prev(self):
+        if not self.noShapes():
+            self.status('# no shape')
+            return
+
+        if len(self.mImgList) <= 0:
+            self.status('no prev image')
+            return
+
+        if self.filePath is None:
+            self.status('no file')
+            return
+
+        currIndex = self.mImgList.index(self.filePath)
+        if currIndex - 1 < 0:
+            self.status('no prev image')
+            return
+
+        filename = self.mImgList[currIndex - 1]
+        if not filename:
+            self.status('no filename')
+            return
+
+        filename = ustr(filename)
+        if not (filename and os.path.exists(filename)):
+            self.status('no filename')
+            return
+
+        # Label xml file and show bound box according to its filename
+        if not (self.usingPascalVocFormat is True and self.defaultSaveDir is not None):
+            self.status('no default save dir')
+            return
+
+        basename = os.path.basename(os.path.splitext(filename)[0]) + XML_EXT
+        xmlPath = os.path.join(self.defaultSaveDir, basename)
+        self.loadPascalXMLByFilename(xmlPath)
+
+        self.canvas.setFocus(True)
+
+        self.status('copied')
+        self.setDirty()
+
+
     def set_format(self, save_format):
         if save_format == FORMAT_PASCALVOC:
             self.actions.save_format.setText(FORMAT_PASCALVOC)
@@ -789,7 +837,7 @@ class MainWindow(QMainWindow, WindowMixin):
     def updateComboBox(self):
         # Get the unique labels and add them to the Combobox.
         itemsTextList = [str(self.labelList.item(i).text()) for i in range(self.labelList.count())]
-            
+
         uniqueTextList = list(set(itemsTextList))
         # Add a null row for showing all the labels
         uniqueTextList.append("")
